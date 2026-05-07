@@ -40,3 +40,23 @@ def test_claim_checker_supports_donor_batch_and_strict_combination_claims():
     combo_split = generate_split(adata, strategy="strict-unseen-combination", test_size=0.3)
     combo_claim = check_claim(adata, combo_split, claim="strict_unseen_combination_components")
     assert combo_claim["status"].iloc[0] in {"SUPPORTED", "INSUFFICIENT_METADATA"}
+
+
+def test_balanced_random_split_preserves_perturbations_in_train_and_test_when_feasible():
+    adata = create_synthetic_perturbseq(n_cells=440, random_state=33)
+
+    split = generate_split(
+        adata,
+        strategy="balanced-random",
+        test_size=0.25,
+        random_state=33,
+        balance_columns=["batch"],
+    )
+
+    merged = adata.obs.assign(split=split["split"].values)
+    feasible = merged.groupby(["perturbation", "batch"], observed=True).filter(lambda group: len(group) >= 2)
+    counts = feasible.groupby(["perturbation", "batch", "split"], observed=True).size().unstack(fill_value=0)
+
+    assert {"train", "test"}.issubset(set(split["split"]))
+    assert (counts.get("test", 0) > 0).any()
+    assert (counts.get("train", 0) > 0).all()

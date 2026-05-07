@@ -176,3 +176,15 @@ def test_split_cli_exposes_seed_and_validation_size(tmp_path: Path):
     split2 = pd.read_csv(out2 / "split.csv")
     assert "val" in set(split1["split"])
     assert not split1["split"].equals(split2["split"])
+
+
+def test_cli_help_explains_commands_and_split_options():
+    top = runner.invoke(app, ["--help"])
+    assert top.exit_code == 0
+    assert "Evaluate model prediction CSVs" in top.stdout
+    assert "Generate train/val/test split CSVs" in top.stdout
+
+    split_help = runner.invoke(app, ["split", "--help"])
+    assert split_help.exit_code == 0
+    assert "balanced-random" in split_help.stdout
+    assert "--balance-column" in split_help.stdout

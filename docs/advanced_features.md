@@ -1,6 +1,8 @@
 # Advanced Features
 
-PerturbGuard now includes ten higher-level guardrails beyond the original audit core.
+PerturbGuard includes higher-level guardrails beyond the original audit core. These features are
+useful screening tools, but they are intentionally conservative and should be validated on your
+own perturbation platform before being used for publication-grade conclusions.
 
 1. `evaluate`: audits model predictions overall, by metadata group, and by optional confidence calibration.
 2. `repair`: writes a normalized AnnData file with canonical metadata, unique indices, and inferred controls where possible.

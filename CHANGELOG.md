@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.1
+
+- Clarifies project maturity language: PerturbGuard is a first public release and should be treated as beta-quality guardrail software until validated on each user's datasets.
+- Improves CLI help text with command descriptions and option help for the main workflows.
+- Adds `balanced-random` split generation, which stratifies by perturbation and optional metadata columns where feasible.
+- Expands documentation on heuristic/statistical limitations for confounding, split generation, and model evaluation.
+- Updates package project URLs to the actual GitHub repository.
+
 ## 1.0.0
 
 - First stable PerturbGuard release.

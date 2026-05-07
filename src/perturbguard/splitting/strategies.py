@@ -10,6 +10,33 @@ def _split_components(perturbation: str) -> tuple[str, ...]:
     return tuple(part.strip() for part in normalized.split("+") if part.strip())
 
 
+def _balanced_sample(
+    obs: pd.DataFrame,
+    columns: list[str],
+    fraction: float,
+    rng: np.random.Generator,
+    available_index: pd.Index | None = None,
+) -> pd.Index:
+    source = obs.loc[available_index] if available_index is not None else obs
+    chosen = []
+    safe_columns = [column for column in columns if column in source]
+    if not safe_columns:
+        n = max(1, int(len(source) * fraction))
+        return pd.Index(rng.choice(source.index.to_numpy(), size=min(n, len(source)), replace=False))
+    strata = source[safe_columns].astype("string").fillna("<missing>").agg("||".join, axis=1)
+    for _, stratum_index in strata.groupby(strata, observed=True).groups.items():
+        stratum_index = pd.Index(stratum_index)
+        if len(stratum_index) < 2:
+            continue
+        n = int(round(len(stratum_index) * fraction))
+        n = min(max(1, n), len(stratum_index) - 1)
+        chosen.extend(rng.choice(stratum_index.to_numpy(), size=n, replace=False).tolist())
+    if not chosen:
+        n = max(1, int(len(source) * fraction))
+        chosen = rng.choice(source.index.to_numpy(), size=min(n, len(source)), replace=False).tolist()
+    return pd.Index(chosen)
+
+
 def generate_split(
     adata: AnnData,
     strategy: str = "random",
@@ -17,6 +44,7 @@ def generate_split(
     val_size: float = 0.0,
     random_state: int = 0,
     metadata_column: str | None = None,
+    balance_columns: list[str] | None = None,
 ) -> pd.DataFrame:
     strategy = strategy.replace("-", "_")
     rng = np.random.default_rng(random_state)
@@ -28,6 +56,10 @@ def generate_split(
         order = rng.permutation(len(obs))
         n_test = max(1, int(len(obs) * test_size))
         split.iloc[order[:n_test]] = "test"
+    elif strategy == "balanced_random":
+        columns = ["perturbation"] + list(balance_columns or [])
+        test_idx = _balanced_sample(obs, columns, test_size, rng)
+        split.loc[test_idx] = "test"
     elif strategy == "leave_target_gene_out":
         targets = sorted([t for t in obs["target_gene"].dropna().astype(str).unique() if t.lower() != "control"])
         rng.shuffle(targets)

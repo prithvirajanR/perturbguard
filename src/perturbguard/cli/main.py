@@ -41,18 +41,32 @@ from perturbguard.simulate.synthetic_anndata import create_synthetic_perturbseq
 from perturbguard.splitting.strategies import generate_split
 from perturbguard.streaming.profile import profile_h5ad
 
-app = typer.Typer(help="Audit perturbation datasets, splits, and claims.")
+app = typer.Typer(
+    help=(
+        "Audit single-cell perturbation AnnData files, generate/check benchmark splits, "
+        "and write guardrail reports."
+    )
+)
 
 
-@app.command()
-def simulate(scenario: str = "clean", out: Path = typer.Option(...), n_cells: int = 360, n_genes: int = 60):
+@app.command(help="Create a synthetic perturb-seq-like AnnData file for demos and tests.")
+def simulate(
+    scenario: str = typer.Option("clean", help="Synthetic scenario: clean, batch_confounded, low_cell_count, guide_inconsistent, failed_knockdown, or leaky_combo."),
+    out: Path = typer.Option(..., help="Output .h5ad path."),
+    n_cells: int = typer.Option(360, help="Number of synthetic cells."),
+    n_genes: int = typer.Option(60, help="Number of synthetic genes."),
+):
     out.parent.mkdir(parents=True, exist_ok=True)
     create_synthetic_perturbseq(scenario=scenario, n_cells=n_cells, n_genes=n_genes).write_h5ad(out)
     typer.echo(f"Wrote {out}")
 
 
-@app.command()
-def validate(data: Path = typer.Option(...), out: Path | None = None, config: Path | None = None):
+@app.command(help="Validate that an AnnData file has the basic structure and metadata needed for audits.")
+def validate(
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path | None = typer.Option(None, help="Optional output CSV path."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
+):
     cfg = load_config(config)
     if cfg.schema:
         try:
@@ -115,13 +129,13 @@ def _audit_sections(
     return sections
 
 
-@app.command()
+@app.command(help="Run the full PerturbGuard audit and write CSV tables, plots, summary JSON, and HTML.")
 def audit(
-    data: Path = typer.Option(...),
-    out: Path = typer.Option(...),
-    config: Path | None = None,
-    split: Path | None = None,
-    claim_name: str | None = typer.Option(None, "--claim"),
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output report directory."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
+    split: Path | None = typer.Option(None, help="Optional split CSV to include leakage/split checks."),
+    claim_name: str | None = typer.Option(None, "--claim", help="Optional claim to validate against the split."),
     fail_on: str = typer.Option("never", help="Exit nonzero on audit status: never, fail, warning."),
 ):
     out.mkdir(parents=True, exist_ok=True)
@@ -146,16 +160,24 @@ def audit(
         raise typer.Exit(1)
 
 
-@app.command(name="split")
+@app.command(name="split", help="Generate train/val/test split CSVs for perturbation benchmark claims.")
 def split_cmd(
-    data: Path = typer.Option(...),
-    out: Path = typer.Option(...),
-    strategy: str = "random",
-    test_size: float = 0.2,
-    val_size: float = 0.0,
-    random_state: int = 0,
-    metadata_column: str | None = None,
-    config: Path | None = None,
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output directory for split.csv."),
+    strategy: str = typer.Option(
+        "random",
+        help=(
+            "Split strategy: random, balanced-random, leave-target-gene-out, "
+            "leave-perturbation-out, leave-metadata-out, strict-unseen-combination, "
+            "or seen-component-unseen-combination."
+        ),
+    ),
+    test_size: float = typer.Option(0.2, help="Approximate fraction for test/evaluation holdout."),
+    val_size: float = typer.Option(0.0, help="Optional validation fraction drawn from train cells."),
+    random_state: int = typer.Option(0, help="Random seed."),
+    metadata_column: str | None = typer.Option(None, help="Metadata column for leave-metadata-out."),
+    balance_column: list[str] = typer.Option(None, "--balance-column", help="Extra metadata column for balanced-random stratification; can be repeated."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
 ):
     out.mkdir(parents=True, exist_ok=True)
     cfg = load_config(config)
@@ -166,18 +188,19 @@ def split_cmd(
         val_size=val_size,
         random_state=random_state,
         metadata_column=metadata_column,
+        balance_columns=balance_column or None,
     )
     split_df.to_csv(out / "split.csv", index=False)
     typer.echo(f"Wrote {out / 'split.csv'}")
 
 
-@app.command()
+@app.command(help="Check whether a split supports a declared generalization claim.")
 def claim(
-    data: Path = typer.Option(...),
-    split: Path = typer.Option(...),
-    claim_name: str = typer.Option("unseen_perturbation", "--claim"),
-    out: Path = typer.Option(...),
-    config: Path | None = None,
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    split: Path = typer.Option(..., help="Split CSV with cell_id/perturbation and split columns."),
+    claim_name: str = typer.Option("unseen_perturbation", "--claim", help="Claim to check."),
+    out: Path = typer.Option(..., help="Output directory."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
 ):
     out.mkdir(parents=True, exist_ok=True)
     cfg = load_config(config)
@@ -190,13 +213,13 @@ def claim(
     typer.echo(result.to_string(index=False))
 
 
-@app.command()
+@app.command(help="Evaluate model prediction CSVs against AnnData cells and metadata groups.")
 def evaluate(
-    data: Path = typer.Option(...),
-    predictions: Path = typer.Option(...),
-    out: Path = typer.Option(...),
-    config: Path | None = None,
-    group_column: list[str] = typer.Option(None, "--group-column"),
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    predictions: Path = typer.Option(..., help="CSV with cell_id, y_true, y_pred, and optional confidence."),
+    out: Path = typer.Option(..., help="Output report directory."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
+    group_column: list[str] = typer.Option(None, "--group-column", help="Metadata column for per-group metrics; can be repeated."),
 ):
     out.mkdir(parents=True, exist_ok=True)
     tables = out / "tables"
@@ -212,11 +235,11 @@ def evaluate(
     typer.echo(f"Wrote model evaluation to {out}")
 
 
-@app.command()
+@app.command(help="Write a normalized AnnData file with canonical metadata and repaired duplicate IDs.")
 def repair(
-    data: Path = typer.Option(...),
-    out: Path = typer.Option(...),
-    config: Path | None = None,
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output repaired .h5ad path."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
 ):
     out.parent.mkdir(parents=True, exist_ok=True)
     cfg = load_config(config)
@@ -232,20 +255,23 @@ def repair(
     typer.echo(f"Wrote repair actions to {actions_path}")
 
 
-@app.command(name="infer-config")
-def infer_config_cmd(data: Path = typer.Option(...), out: Path = typer.Option(...)):
+@app.command(name="infer-config", help="Infer a starter YAML config from common AnnData obs column aliases.")
+def infer_config_cmd(
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output YAML config path."),
+):
     out.parent.mkdir(parents=True, exist_ok=True)
     config = infer_config(ad.read_h5ad(data, backed="r"))
     out.write_text(yaml.safe_dump(config, sort_keys=False), encoding="utf-8")
     typer.echo(f"Wrote inferred config to {out}")
 
 
-@app.command(name="target-map")
+@app.command(name="target-map", help="Audit target annotations for genes, drug classes, pathways/classes, and unmapped targets.")
 def target_map_cmd(
-    data: Path = typer.Option(...),
-    out: Path = typer.Option(...),
-    config: Path | None = None,
-    mapping: Path | None = None,
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output report directory."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
+    mapping: Path | None = typer.Option(None, help="Optional CSV with perturbation,target,target_type,source."),
 ):
     out.mkdir(parents=True, exist_ok=True)
     cfg = load_config(config)
@@ -259,8 +285,11 @@ def target_map_cmd(
     typer.echo(f"Wrote target mapping audit to {out}")
 
 
-@app.command(name="compare-datasets")
-def compare_datasets_cmd(data: list[Path] = typer.Option(...), out: Path = typer.Option(...)):
+@app.command(name="compare-datasets", help="Compare high-level composition across multiple AnnData files.")
+def compare_datasets_cmd(
+    data: list[Path] = typer.Option(..., help="Input .h5ad file; can be repeated."),
+    out: Path = typer.Option(..., help="Output report directory."),
+):
     out.mkdir(parents=True, exist_ok=True)
     datasets = {path.stem: ad.read_h5ad(path) for path in data}
     result = compare_datasets(datasets)
@@ -269,8 +298,11 @@ def compare_datasets_cmd(data: list[Path] = typer.Option(...), out: Path = typer
     typer.echo(f"Wrote dataset comparison to {out}")
 
 
-@app.command(name="design-check")
-def design_check_cmd(design: Path = typer.Option(...), out: Path = typer.Option(...)):
+@app.command(name="design-check", help="Check a planned experiment design table for controls and cell-count support.")
+def design_check_cmd(
+    design: Path = typer.Option(..., help="Input design CSV, TSV, or YAML."),
+    out: Path = typer.Option(..., help="Output report directory."),
+):
     out.mkdir(parents=True, exist_ok=True)
     if design.suffix.lower() in {".yaml", ".yml"}:
         raw = load_config(design).raw
@@ -283,8 +315,11 @@ def design_check_cmd(design: Path = typer.Option(...), out: Path = typer.Option(
     typer.echo(f"Wrote design report to {out}")
 
 
-@app.command(name="power-check")
-def power_check_cmd(design: Path = typer.Option(...), out: Path = typer.Option(...)):
+@app.command(name="power-check", help="Check planned cells, controls, replicate support, and batch support.")
+def power_check_cmd(
+    design: Path = typer.Option(..., help="Input design CSV, TSV, or YAML."),
+    out: Path = typer.Option(..., help="Output report directory."),
+):
     out.mkdir(parents=True, exist_ok=True)
     if design.suffix.lower() in {".yaml", ".yml"}:
         raw = load_config(design).raw
@@ -297,8 +332,11 @@ def power_check_cmd(design: Path = typer.Option(...), out: Path = typer.Option(.
     typer.echo(f"Wrote power report to {out}")
 
 
-@app.command(name="benchmark-check")
-def benchmark_check_cmd(manifest: Path = typer.Option(...), out: Path = typer.Option(...)):
+@app.command(name="benchmark-check", help="Validate a benchmark manifest and verify its declared split/claim.")
+def benchmark_check_cmd(
+    manifest: Path = typer.Option(..., help="Benchmark YAML manifest."),
+    out: Path = typer.Option(..., help="Output report directory."),
+):
     out.mkdir(parents=True, exist_ok=True)
     result = check_benchmark_manifest(manifest)
     result.to_csv(out / "benchmark_validation.csv", index=False)
@@ -306,8 +344,11 @@ def benchmark_check_cmd(manifest: Path = typer.Option(...), out: Path = typer.Op
     typer.echo(f"Wrote benchmark validation to {out}")
 
 
-@app.command(name="profile-large")
-def profile_large_cmd(data: Path = typer.Option(...), out: Path = typer.Option(...)):
+@app.command(name="profile-large", help="Open a large .h5ad in backed mode and report shape/storage metadata.")
+def profile_large_cmd(
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output report directory."),
+):
     out.mkdir(parents=True, exist_ok=True)
     result = profile_h5ad(data)
     result.to_csv(out / "large_profile.csv", index=False)
@@ -315,12 +356,12 @@ def profile_large_cmd(data: Path = typer.Option(...), out: Path = typer.Option(.
     typer.echo(f"Wrote large-file profile to {out}")
 
 
-@app.command(name="adversarial-check")
+@app.command(name="adversarial-check", help="Run shortcut/leakage probes such as metadata-only perturbation prediction.")
 def adversarial_check_cmd(
-    data: Path = typer.Option(...),
-    out: Path = typer.Option(...),
-    config: Path | None = None,
-    split: Path | None = None,
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output report directory."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
+    split: Path | None = typer.Option(None, help="Optional split CSV for split-label dominance checks."),
 ):
     out.mkdir(parents=True, exist_ok=True)
     cfg = load_config(config)
@@ -334,12 +375,12 @@ def adversarial_check_cmd(
     typer.echo(f"Wrote adversarial checks to {out}")
 
 
-@app.command(name="dataset-card")
+@app.command(name="dataset-card", help="Write a Markdown dataset card summarizing audit status, uses, and limitations.")
 def dataset_card_cmd(
-    data: Path = typer.Option(...),
-    out: Path = typer.Option(...),
-    config: Path | None = None,
-    name: str | None = None,
+    data: Path = typer.Option(..., help="Input .h5ad file."),
+    out: Path = typer.Option(..., help="Output Markdown path."),
+    config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
+    name: str | None = typer.Option(None, help="Dataset name to show in the card."),
 ):
     out.parent.mkdir(parents=True, exist_ok=True)
     sections = _audit_sections(data, config)

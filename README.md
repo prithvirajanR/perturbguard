@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/prithvirajanR/perturbguard/actions/workflows/ci.yml/badge.svg)](https://github.com/prithvirajanR/perturbguard/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-1.0.0-green)](https://github.com/prithvirajanR/perturbguard/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/release-1.0.1-blue)](https://github.com/prithvirajanR/perturbguard/releases/tag/v1.0.1)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
 **FastQC-style guardrails for single-cell perturbation datasets, splits, claims, and model benchmarks.**
@@ -12,6 +12,8 @@ PerturbGuard helps you answer the uncomfortable but necessary question:
 > Is this perturbation benchmark actually valid, or did leakage, controls, confounding, weak target effects, or split design make it look better than it is?
 
 It works with AnnData `.h5ad` files and produces interactive HTML reports, machine-readable CSV tables, JSON summaries, and Markdown dataset cards.
+
+**Maturity note:** PerturbGuard is a first public release of guardrail software. Treat it as beta-quality until you have validated its warnings, thresholds, and split behaviour on your own datasets and study designs.
 
 ## Why Use It
 
@@ -93,7 +95,7 @@ perturbguard evaluate \
 | Config inference | Suggests YAML schema mappings from common metadata aliases in messy public datasets. |
 | Repair | Writes normalized `.h5ad` files with canonical metadata, unique indices, inferred controls, and repair action logs. |
 | QC audit | Audits perturbation support, controls, cell counts, confounding, metadata shortcuts, target effects, guide consistency, and target mapping. |
-| Split generation | Creates random, leave-target-gene-out, leave-perturbation-out, metadata holdout, strict combination, and seen-component combination splits. |
+| Split generation | Creates random, balanced-random, leave-target-gene-out, leave-perturbation-out, metadata holdout, strict combination, and seen-component combination splits. |
 | Claim checking | Verifies whether a split supports claims like unseen perturbation, unseen target gene, or unseen combinations. |
 | Leakage detection | Detects train/val/test leakage, combination leakage, unsupported claims, split imbalance, and invalid split labels. |
 | Model evaluation | Audits prediction CSVs for overall metrics, per-group performance, and confidence calibration. |
@@ -209,9 +211,11 @@ python scripts/run_smoke_matrix.py --include-real
 
 PerturbGuard is not a perturbation prediction model and does not claim biological truth for unmeasured perturbations. It is a guardrail system: it tells you when your dataset, split, controls, metadata, or benchmark claim may not support the conclusion you want to draw.
 
+Its statistical checks are screening heuristics. Confounding checks, split generation, and model-evaluation metrics are meant to catch common failure modes, not to replace careful study-specific modelling, optimized benchmark design, or perturbation-effect metrics tailored to your biological task.
+
 ## Release
 
-Current stable release: `1.0.0`
+Current release: `1.0.1` beta-quality first public release.
 
 Built and verified with:
 
