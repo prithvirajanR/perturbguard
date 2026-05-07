@@ -1,0 +1,73 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "perturbguard"
+version = "1.0.0"
+description = "QC, leakage detection, split design, and claim validation for single-cell perturbation studies."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+  {name = "PerturbGuard contributors"},
+]
+keywords = ["single-cell", "perturb-seq", "quality-control", "leakage", "anndata"]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = [
+  "anndata>=0.10",
+  "numpy",
+  "pandas",
+  "scipy",
+  "scikit-learn",
+  "statsmodels",
+  "networkx",
+  "typer",
+  "rich",
+  "pyyaml",
+  "jinja2",
+  "plotly",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-cov",
+  "ruff",
+  "mypy",
+]
+
+[project.scripts]
+perturbguard = "perturbguard.cli.main:app"
+
+[project.urls]
+Homepage = "https://github.com/perturbguard/perturbguard"
+Documentation = "https://github.com/perturbguard/perturbguard#readme"
+Issues = "https://github.com/perturbguard/perturbguard/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+perturbguard = ["reports/templates/*.j2"]
+
+[tool.setuptools.data-files]
+"share/perturbguard/configs" = ["configs/*.yaml"]
+"share/perturbguard/docs" = ["docs/*.md"]
+"share/perturbguard/workflows/snakemake" = ["workflows/snakemake/Snakefile", "workflows/snakemake/config.yaml"]
+"share/perturbguard/workflows/snakemake/profiles/slurm" = ["workflows/snakemake/profiles/slurm/config.yaml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "."]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

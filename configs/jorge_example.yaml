@@ -1,0 +1,10 @@
+schema:
+  perturbation: mutation_name
+  is_control: UTR_cond
+  target_gene: mutation_name
+  guide_id: mutation_poi
+  perturbation_type: UTR_cond
+  batch: mutation_poi
+
+controls:
+  labels: ["WT", "not mutated"]

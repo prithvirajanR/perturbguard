@@ -1,0 +1,15 @@
+schema:
+  perturbation: product_name_clean
+  is_control: vehicle
+  target_gene: target
+  perturbation_type: perturb_string_processed
+  cell_type: cell_type
+  batch: culture_plate
+  replicate: replicate
+  timepoint: time_point
+  dose: dose
+  n_counts: n_counts
+  pct_mito: percent_mito
+
+controls:
+  labels: ["DMSO", "vehicle", "control", "ctrl"]

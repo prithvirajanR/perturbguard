@@ -1,0 +1,7 @@
+include LICENSE
+include CHANGELOG.md
+recursive-include configs *.yaml
+recursive-include docs *.md
+recursive-include scripts *.py
+recursive-include workflows *
+recursive-include .github *.yml

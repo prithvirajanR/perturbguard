@@ -1,0 +1,19 @@
+schema:
+  perturbation: perturbation
+  is_control: is_control
+  target_gene: target_gene
+  guide_id: guide_id
+  perturbation_type: perturbation_type
+  cell_type: cell_type
+  batch: batch
+  replicate: replicate
+controls:
+  labels: ["control", "ctrl", "NTC", "non-targeting", "DMSO", "vehicle"]
+  min_controls_per_group: 30
+cell_count:
+  min_cells_warning: 50
+  min_cells_fail: 20
+confounding:
+  metadata_columns: ["batch", "replicate", "donor", "plate", "timepoint"]
+  cramers_v_warning: 0.3
+  cramers_v_fail: 0.5

@@ -1,0 +1,11 @@
+schema:
+  perturbation: pert_iname
+  target_gene: pert_id
+  perturbation_type: pert_type
+  cell_type: cell_id
+  batch: batch_ident
+  timepoint: pert_time
+  dose: fake_dose
+
+controls:
+  labels: ["DMSO", "vehicle", "control", "ctrl"]

@@ -1,0 +1,13 @@
+configfile: "config.yaml"
+
+rule all:
+    input:
+        "results/audit/report.html"
+
+rule audit:
+    input:
+        data=config["data"]
+    output:
+        "results/audit/report.html"
+    shell:
+        "perturbguard audit --data {input.data} --out results/audit"
