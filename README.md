@@ -21,10 +21,10 @@ PerturbGuard audits those failure modes before you trust a dataset, split, claim
 
 ## Install
 
-From GitHub:
+From PyPI:
 
 ```bash
-pip install "perturbguard @ git+https://github.com/prithvirajanR/perturbguard.git@v1.0.0"
+pip install perturbguard
 ```
 
 For local development:
@@ -221,4 +221,3 @@ Built and verified with:
 - scikit-learn
 - Plotly
 - Typer
-
