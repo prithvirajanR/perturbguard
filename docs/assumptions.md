@@ -22,12 +22,17 @@ experiment size, modality, cell type diversity, dose design, and intended claim.
 - Confounding checks use first-pass association tests and effect-size thresholds over available
   metadata. They do not model all nested, paired, longitudinal, dose-response, or mixed-effect
   study designs.
+- Target-effect checking uses configured `expected_direction` when available, infers common
+  CRISPRi/knockdown versus CRISPRa/activation directions, and can score configured multi-gene
+  targets from `target_genes`. It can flag weak or reversed effects, but it does not prove
+  mechanism, specificity, dose response, pathway response, or downstream biological validity.
 - Split generation is deterministic and auditable, but it is not a full optimization solver.
   `balanced-random` stratifies over feasible perturbation/metadata groups; rare strata may still
   fall entirely in train when a valid test sample cannot be drawn without creating empty groups.
-- Model evaluation reports standard classification metrics and simple confidence calibration.
-  Serious perturbation prediction benchmarks should add task-specific metrics such as
-  differential-expression recovery, rank correlation of perturbation effects, pathway-level
-  recovery, and uncertainty/error analysis.
+- Model evaluation supports two modes. Class-label prediction tables report general metrics such
+  as balanced accuracy and macro-F1 plus simple confidence calibration. Perturbation-effect
+  prediction tables report differential-expression top-k recovery, rank correlation of
+  perturbation effects, optional pathway-level recovery from user-provided gene sets, and
+  prediction-interval coverage when lower/upper prediction columns are available.
 - Target mapping classifies available annotations. Drug mechanisms, pathway annotations, and
   polypharmacology often require curated user-supplied mapping tables.

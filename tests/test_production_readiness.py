@@ -1,6 +1,8 @@
 from pathlib import Path
+import tomllib
 from typer.testing import CliRunner
 
+import perturbguard
 from perturbguard.cli.main import app
 from perturbguard.leakage.split_balance import evaluate_split_balance
 from perturbguard.qc.dataset_validator import validate_h5ad_file
@@ -81,6 +83,32 @@ def test_production_scaffolding_files_exist_and_metadata_is_versioned():
     assert Path("LICENSE").exists()
     assert Path("docs/assumptions.md").exists()
     assert Path("docs/input_contract.md").exists()
+
+
+def test_package_version_and_maturity_metadata_are_consistent():
+    pyproject = tomllib.loads(Path("pyproject.toml").read_text(encoding="utf-8"))
+    project = pyproject["project"]
+
+    assert perturbguard.__version__ == project["version"]
+    assert "Development Status :: 4 - Beta" in project["classifiers"]
+    assert "Development Status :: 5 - Production/Stable" not in project["classifiers"]
+
+    readme = Path("README.md").read_text(encoding="utf-8")
+    assert f"Current source version: `{project['version']}`" in readme
+    assert "Current stable release" not in readme
+
+
+def test_docs_do_not_present_smoke_tests_as_scientific_validation():
+    beta_report = Path("docs/beta_test_report.md").read_text(encoding="utf-8").lower()
+    assumptions = Path("docs/assumptions.md").read_text(encoding="utf-8").lower()
+
+    assert "smoke" in beta_report
+    assert "not scientific validation" in beta_report
+    assert "not evidence that statistical conclusions are robust" in beta_report
+    assert "expected_direction" in assumptions
+    assert "multi-gene" in assumptions
+    assert "balanced accuracy" in assumptions
+    assert "macro-f1" in assumptions
 
 
 def test_large_sparse_smoke_runs_under_basic_size_budget():

@@ -10,6 +10,7 @@ from typer.testing import CliRunner
 
 from perturbguard.adversarial.tests import run_adversarial_checks
 from perturbguard.benchmark.manifest import check_benchmark_manifest
+from perturbguard.benchmark.validation import run_validation_benchmark
 from perturbguard.cli.main import app
 from perturbguard.design.power import check_power
 from perturbguard.evaluate.model import evaluate_predictions
@@ -43,6 +44,40 @@ def test_evaluate_predictions_reports_overall_and_group_failures():
     assert result["overall"]["n_predictions"].iloc[0] == adata.n_obs
     assert "status" in result["per_group"].columns
     assert result["calibration"]["status"].iloc[0] in {"PASS", "WARNING", "FAIL", "INSUFFICIENT_METADATA"}
+
+
+def test_evaluate_predictions_reports_perturbation_effect_metrics():
+    adata = create_synthetic_perturbseq(n_cells=120, random_state=209)
+    controls = adata.obs["is_control"].astype(bool).values
+    rows = []
+    for perturbation, group in adata.obs.loc[~controls].groupby("perturbation", observed=True):
+        idx = adata.obs.index.get_indexer(group.index)
+        observed_mean = np.asarray(adata.X[idx]).mean(axis=0)
+        predicted_mean = observed_mean.copy()
+        row = {
+            "perturbation": perturbation,
+            "n_predicted_cells": len(group),
+        }
+        for gene, observed, predicted in zip(adata.var_names[:8], observed_mean[:8], predicted_mean[:8], strict=False):
+            row[f"true_{gene}"] = observed
+            row[f"pred_{gene}"] = predicted
+            row[f"pred_low_{gene}"] = predicted - 0.5
+            row[f"pred_high_{gene}"] = predicted + 0.5
+        rows.append(row)
+    predictions = pd.DataFrame(rows)
+
+    result = evaluate_predictions(
+        adata,
+        predictions,
+        gene_sets={"stress": list(adata.var_names[:4]), "other": list(adata.var_names[4:8])},
+        top_k_de=3,
+    )
+
+    assert {"effect_recovery", "pathway_recovery", "interval_calibration"}.issubset(result)
+    assert result["effect_recovery"]["spearman_effect_corr"].notna().all()
+    assert result["effect_recovery"]["top_k_de_recovery"].between(0, 1).all()
+    assert result["pathway_recovery"]["pathway_score_correlation"].notna().all()
+    assert result["interval_calibration"]["interval_coverage"].between(0, 1).all()
 
 
 def test_repair_anndata_standardizes_schema_controls_and_duplicate_indices():
@@ -135,6 +170,79 @@ def test_benchmark_manifest_validates_paths_and_claim(tmp_path):
     }
 
 
+def test_validation_benchmark_scores_expected_audit_findings(tmp_path):
+    adata = create_synthetic_perturbseq(scenario="batch_confounded", n_cells=180, random_state=211)
+    data = tmp_path / "batch_confounded.h5ad"
+    expected = tmp_path / "expected_findings.csv"
+    manifest = tmp_path / "validation.yaml"
+    adata.write_h5ad(data)
+    pd.DataFrame(
+        [
+            {
+                "case": "batch_confounded",
+                "section": "metadata_concentration",
+                "match_column": "metadata_variable",
+                "match_value": "batch",
+                "expected_status": "FAIL",
+            },
+            {
+                "case": "batch_confounded",
+                "section": "metadata_shortcut",
+                "expected_status": "FAIL",
+            },
+        ]
+    ).to_csv(expected, index=False)
+    manifest.write_text(
+        yaml.safe_dump(
+            {
+                "cases": [{"name": "batch_confounded", "dataset": str(data)}],
+                "expected_findings": str(expected),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = run_validation_benchmark(manifest)
+
+    assert {"case", "section", "expected_status", "observed_status", "status"}.issubset(result.columns)
+    assert result["status"].eq("PASS").all()
+
+
+def test_cli_validation_benchmark_writes_expected_finding_results(tmp_path):
+    adata = create_synthetic_perturbseq(scenario="batch_confounded", n_cells=180, random_state=212)
+    data = tmp_path / "data.h5ad"
+    expected = tmp_path / "expected.csv"
+    manifest = tmp_path / "validation.yaml"
+    out = tmp_path / "validation"
+    adata.write_h5ad(data)
+    pd.DataFrame(
+        [
+            {
+                "case": "case1",
+                "section": "metadata_concentration",
+                "match_column": "metadata_variable",
+                "match_value": "batch",
+                "expected_status": "FAIL",
+            }
+        ]
+    ).to_csv(expected, index=False)
+    manifest.write_text(
+        yaml.safe_dump(
+            {
+                "cases": [{"name": "case1", "dataset": str(data)}],
+                "expected_findings": str(expected),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(app, ["validation-benchmark", "--manifest", str(manifest), "--out", str(out)])
+
+    assert result.exit_code == 0, result.stdout
+    assert (out / "validation_results.csv").exists()
+    assert pd.read_csv(out / "validation_results.csv")["status"].eq("PASS").all()
+
+
 def test_profile_h5ad_reports_backed_shape_without_crashing(tmp_path):
     adata = create_synthetic_perturbseq(n_cells=25, random_state=205)
     data = tmp_path / "profile.h5ad"
@@ -205,6 +313,7 @@ def test_cli_exposes_new_commands(tmp_path):
         "target-map",
         "power-check",
         "benchmark-check",
+        "validation-benchmark",
         "profile-large",
         "adversarial-check",
         "dataset-card",
@@ -218,3 +327,41 @@ def test_cli_exposes_new_commands(tmp_path):
         "WARNING",
         "FAIL",
     }
+
+
+def test_cli_evaluate_writes_effect_recovery_tables_for_expression_predictions(tmp_path):
+    adata = create_synthetic_perturbseq(n_cells=80, random_state=210)
+    data = tmp_path / "data.h5ad"
+    pred = tmp_path / "effect_predictions.csv"
+    gene_sets = tmp_path / "gene_sets.yaml"
+    adata.write_h5ad(data)
+    rows = []
+    for perturbation, group in adata.obs.loc[~adata.obs["is_control"].astype(bool)].groupby("perturbation", observed=True):
+        idx = adata.obs.index.get_indexer(group.index)
+        observed_mean = np.asarray(adata.X[idx]).mean(axis=0)
+        row = {"perturbation": perturbation}
+        for gene, observed in zip(adata.var_names[:6], observed_mean[:6], strict=False):
+            row[f"true_{gene}"] = observed
+            row[f"pred_{gene}"] = observed
+        rows.append(row)
+    pd.DataFrame(rows).to_csv(pred, index=False)
+    gene_sets.write_text(yaml.safe_dump({"set_a": list(adata.var_names[:3]), "set_b": list(adata.var_names[3:6])}), encoding="utf-8")
+
+    result = runner.invoke(
+        app,
+        [
+            "evaluate",
+            "--data",
+            str(data),
+            "--predictions",
+            str(pred),
+            "--gene-sets",
+            str(gene_sets),
+            "--out",
+            str(tmp_path / "eval"),
+        ],
+    )
+
+    assert result.exit_code == 0, result.stdout
+    assert (tmp_path / "eval" / "tables" / "effect_recovery.csv").exists()
+    assert (tmp_path / "eval" / "tables" / "pathway_recovery.csv").exists()

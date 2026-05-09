@@ -143,6 +143,53 @@ def main(argv: list[str] | None = None) -> None:
     )
     run(["perturbguard", "benchmark-check", "--manifest", str(benchmark_manifest), "--out", str(root / "benchmark")], cwd)
 
+    expected_findings = root / "synthetic_expected_findings.csv"
+    pd.DataFrame(
+        [
+            {
+                "case": "batch_confounded",
+                "section": "metadata_concentration",
+                "match_column": "metadata_variable",
+                "match_value": "batch",
+                "expected_status": "FAIL",
+            },
+            {
+                "case": "failed_knockdown",
+                "section": "target_effect",
+                "expected_status": "FAIL",
+            },
+            {
+                "case": "low_cell_count",
+                "section": "cell_count",
+                "expected_status": "FAIL",
+            },
+        ]
+    ).to_csv(expected_findings, index=False)
+    validation_manifest = root / "synthetic_validation.yaml"
+    yaml.safe_dump(
+        {
+            "cases": [
+                {"name": "batch_confounded", "dataset": str(root / "batch_confounded.h5ad")},
+                {"name": "failed_knockdown", "dataset": str(root / "failed_knockdown.h5ad")},
+                {"name": "low_cell_count", "dataset": str(root / "low_cell_count.h5ad")},
+            ],
+            "expected_findings": str(expected_findings),
+        },
+        validation_manifest.open("w", encoding="utf-8"),
+    )
+    run(
+        [
+            "perturbguard",
+            "validation-benchmark",
+            "--manifest",
+            str(validation_manifest),
+            "--out",
+            str(root / "synthetic_validation"),
+            "--fail-on-mismatch",
+        ],
+        cwd,
+    )
+
     if args.include_real:
         real_cases = [
             {

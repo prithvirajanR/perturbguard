@@ -10,6 +10,7 @@ import yaml
 
 from perturbguard.adversarial.tests import run_adversarial_checks
 from perturbguard.benchmark.manifest import check_benchmark_manifest
+from perturbguard.benchmark.validation import run_validation_benchmark
 from perturbguard.claims.claim_checker import check_claim
 from perturbguard.compare.datasets import compare_datasets
 from perturbguard.design.checker import check_design
@@ -22,7 +23,7 @@ from perturbguard.io.split_loader import load_split
 from perturbguard.leakage.combination_leakage import check_combination_leakage
 from perturbguard.leakage.split_leakage import check_split_leakage
 from perturbguard.leakage.split_balance import evaluate_split_balance
-from perturbguard.qc.confounding import detect_confounding
+from perturbguard.qc.confounding import detect_confounding, per_perturbation_concentration
 from perturbguard.qc.cell_count import check_cell_counts
 from perturbguard.qc.control_balance import check_control_balance
 from perturbguard.qc.dataset_validator import validate_anndata, validate_h5ad_file
@@ -35,6 +36,7 @@ from perturbguard.repair.anndata import repair_anndata
 from perturbguard.reports.dataset_card import build_dataset_card
 from perturbguard.reports.html import write_html_report
 from perturbguard.reports.plots import write_audit_plots
+from perturbguard.reports.preflight import build_preflight_checks
 from perturbguard.reports.recommendations import build_recommendations
 from perturbguard.reports.summary import build_summary
 from perturbguard.simulate.synthetic_anndata import create_synthetic_perturbseq
@@ -110,6 +112,13 @@ def _audit_sections(
         "control_balance": check_control_balance(adata),
         "cell_count": check_cell_counts(adata),
         "confounding": detect_confounding(adata),
+        "metadata_concentration": pd.concat(
+            [
+                per_perturbation_concentration(adata, column)
+                for column in ["batch", "replicate", "donor"]
+            ],
+            ignore_index=True,
+        ),
         "metadata_shortcut": metadata_shortcut_baseline(adata),
         "target_effect": check_target_effect(adata),
         "target_mapping": audit_target_mapping(adata),
@@ -124,8 +133,12 @@ def _audit_sections(
         )
         sections["combination_leakage"] = check_combination_leakage(adata, split_df)
         sections["split_balance"] = evaluate_split_balance(adata, split_df)
-        if claim_name is not None:
-            sections["claim_support"] = check_claim(adata, split_df, claim_name)
+        sections["claim_support"] = check_claim(
+            adata,
+            split_df,
+            claim_name or "unseen_perturbation",
+        )
+    sections["preflight_checks"] = build_preflight_checks(sections)
     return sections
 
 
@@ -220,13 +233,25 @@ def evaluate(
     out: Path = typer.Option(..., help="Output report directory."),
     config: Path | None = typer.Option(None, help="Optional YAML schema/control mapping."),
     group_column: list[str] = typer.Option(None, "--group-column", help="Metadata column for per-group metrics; can be repeated."),
+    gene_sets: Path | None = typer.Option(None, "--gene-sets", help="Optional YAML gene-set mapping for pathway recovery when predictions include pred_<gene> columns."),
+    top_k_de: int = typer.Option(50, help="Top-k genes for differential-expression recovery when evaluating expression predictions."),
 ):
     out.mkdir(parents=True, exist_ok=True)
     tables = out / "tables"
     tables.mkdir(exist_ok=True)
     cfg = load_config(config)
     adata = apply_schema(ad.read_h5ad(data), cfg.schema, cfg.controls.get("labels"))
-    sections = evaluate_predictions(adata, pd.read_csv(predictions), group_columns=group_column or None)
+    gene_set_map = None
+    if gene_sets is not None:
+        raw_gene_sets = yaml.safe_load(gene_sets.read_text(encoding="utf-8")) or {}
+        gene_set_map = {str(name): list(genes) for name, genes in raw_gene_sets.items()}
+    sections = evaluate_predictions(
+        adata,
+        pd.read_csv(predictions),
+        group_columns=group_column or None,
+        gene_sets=gene_set_map,
+        top_k_de=top_k_de,
+    )
     for name, df in sections.items():
         df.to_csv(tables / f"{name}.csv", index=False)
     write_html_report(out / "report.html", sections)
@@ -342,6 +367,22 @@ def benchmark_check_cmd(
     result.to_csv(out / "benchmark_validation.csv", index=False)
     write_html_report(out / "report.html", {"benchmark_validation": result})
     typer.echo(f"Wrote benchmark validation to {out}")
+
+
+@app.command(name="validation-benchmark", help="Run curated expected-finding cases against audit outputs.")
+def validation_benchmark_cmd(
+    manifest: Path = typer.Option(..., help="YAML manifest with cases and expected_findings CSV."),
+    out: Path = typer.Option(..., help="Output report directory."),
+    fail_on_mismatch: bool = typer.Option(False, help="Exit nonzero if any expected finding is missed."),
+):
+    out.mkdir(parents=True, exist_ok=True)
+    result = run_validation_benchmark(manifest)
+    result.to_csv(out / "validation_results.csv", index=False)
+    write_html_report(out / "report.html", {"validation_results": result})
+    typer.echo(result.to_string(index=False))
+    typer.echo(f"Wrote validation benchmark to {out}")
+    if fail_on_mismatch and result["status"].eq("FAIL").any():
+        raise typer.Exit(1)
 
 
 @app.command(name="profile-large", help="Open a large .h5ad in backed mode and report shape/storage metadata.")

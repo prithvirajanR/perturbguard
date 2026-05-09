@@ -5,6 +5,7 @@ import pandas as pd
 
 DEFAULT_RECOMMENDATIONS = {
     "confounding": "Review batch/donor/replicate randomization before interpreting model performance.",
+    "metadata_concentration": "Inspect perturbations concentrated in one batch, donor, or replicate before trusting benchmark results.",
     "control_balance": "Add or restrict to matched controls for affected groups.",
     "cell_count": "Exclude or cautiously interpret low-support perturbations and guides.",
     "metadata_shortcut": "Treat high metadata-only accuracy as evidence of shortcut risk.",

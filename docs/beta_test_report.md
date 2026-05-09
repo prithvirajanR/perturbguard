@@ -13,3 +13,7 @@ Real-data cases:
 
 The real-data tests verify that schema mapping, missing-control handling, target classification,
 audit table writing, HTML reports, plots, and provided split claim checks complete without crashes.
+
+This is not scientific validation. These smoke tests are useful engineering coverage, but they are
+not evidence that statistical conclusions are robust across real perturbation datasets, biological
+modalities, split designs, target mechanisms, or model families.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.2
+
+- Adds validation benchmark support with curated expected findings and a `validation-benchmark` CLI command.
+- Adds perturbation-effect prediction evaluation with DE top-k recovery, effect-vector rank correlation, pathway recovery, and interval coverage.
+- Improves target-effect checks with configured/inferred expected directions and multi-gene target support.
+- Adds audit preflight summary checks for benchmark sanity review.
+
 ## 1.0.1
 
 - Clarifies project maturity language: PerturbGuard is a first public release and should be treated as beta-quality guardrail software until validated on each user's datasets.
@@ -10,7 +17,7 @@
 
 ## 1.0.0
 
-- First stable PerturbGuard release.
+- First public PerturbGuard release.
 - Adds the full guardrail loop for perturbation benchmarking: config inference, AnnData repair, validation, audit, split generation, claim checking, adversarial leakage checks, model prediction evaluation, benchmark manifest validation, large-file profiling, and dataset-card generation.
 - Adds interactive HTML reports with status summary cards, searchable tables, status filters, plot links, and clearer PASS/WARNING/FAIL/SUPPORTED/UNSUPPORTED styling.
 - Adds target mapping audits for gene, drug class, pathway/class, missing, and unmapped targets, with optional user-supplied perturbation-to-target maps.

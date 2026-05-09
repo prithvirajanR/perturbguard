@@ -187,4 +187,4 @@ def test_cli_help_explains_commands_and_split_options():
     split_help = runner.invoke(app, ["split", "--help"])
     assert split_help.exit_code == 0
     assert "balanced-random" in split_help.stdout
-    assert "--balance-column" in split_help.stdout
+    assert "stratification" in split_help.stdout

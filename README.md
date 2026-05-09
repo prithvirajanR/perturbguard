@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/prithvirajanR/perturbguard/actions/workflows/ci.yml/badge.svg)](https://github.com/prithvirajanR/perturbguard/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-1.0.1-blue)](https://github.com/prithvirajanR/perturbguard/releases/tag/v1.0.1)
+[![Release](https://img.shields.io/badge/release-1.0.2-blue)](https://github.com/prithvirajanR/perturbguard/releases/tag/v1.0.2)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
 **FastQC-style guardrails for single-cell perturbation datasets, splits, claims, and model benchmarks.**
@@ -87,6 +87,26 @@ perturbguard evaluate \
   --out results/evaluation
 ```
 
+For perturbation-effect predictions, provide perturbation-level expression columns instead of
+class labels:
+
+```bash
+perturbguard evaluate \
+  --data data/repaired.h5ad \
+  --predictions effect_predictions.csv \
+  --gene-sets gene_sets.yaml \
+  --out results/effect_evaluation
+```
+
+### Run a validation benchmark
+
+```bash
+perturbguard validation-benchmark \
+  --manifest validation.yaml \
+  --out results/validation \
+  --fail-on-mismatch
+```
+
 ## Feature Map
 
 | Area | What PerturbGuard Does |
@@ -98,11 +118,12 @@ perturbguard evaluate \
 | Split generation | Creates random, balanced-random, leave-target-gene-out, leave-perturbation-out, metadata holdout, strict combination, and seen-component combination splits. |
 | Claim checking | Verifies whether a split supports claims like unseen perturbation, unseen target gene, or unseen combinations. |
 | Leakage detection | Detects train/val/test leakage, combination leakage, unsupported claims, split imbalance, and invalid split labels. |
-| Model evaluation | Audits prediction CSVs for overall metrics, per-group performance, and confidence calibration. |
+| Model evaluation | Audits class-label predictions and perturbation-effect predictions, including DE top-k recovery, effect-vector rank correlation, optional pathway recovery, and interval coverage. |
 | Adversarial checks | Tests whether metadata-only shortcuts can predict perturbation identity. |
 | Target mapping | Classifies targets as measured genes, drug target classes, pathway/class annotations, missing, or unmapped. |
 | Design planning | Checks planned cells, controls, replicate support, and batch support before running an experiment. |
 | Benchmark manifests | Validates dataset/split/claim/model/metrics manifests and runs claim-support checks. |
+| Validation benchmarks | Compares audit outputs against curated expected findings for real or synthetic benchmark cases. |
 | Large files | Profiles `.h5ad` files in backed mode before expensive audits. |
 | Dataset cards | Generates Markdown dataset cards with audit counts, uses, and limitations. |
 | Reports | Writes interactive HTML reports, plot links, CSV tables, `summary.json`, and recommendations. |
@@ -123,6 +144,7 @@ perturbguard compare-datasets
 perturbguard design-check
 perturbguard power-check
 perturbguard benchmark-check
+perturbguard validation-benchmark
 perturbguard profile-large
 perturbguard adversarial-check
 perturbguard dataset-card
@@ -152,7 +174,7 @@ Recommended:
 
 ### Prediction CSV
 
-Required for `perturbguard evaluate`:
+For class-label evaluation, required for `perturbguard evaluate`:
 
 - `cell_id`
 - `y_true`
@@ -161,6 +183,14 @@ Required for `perturbguard evaluate`:
 Optional:
 
 - `confidence`
+
+For perturbation-effect evaluation, use one row per perturbation:
+
+- `perturbation`
+- `true_<gene>` columns for observed mean expression
+- `pred_<gene>` columns for predicted mean expression
+- optional `pred_low_<gene>` and `pred_high_<gene>` columns for interval coverage
+- optional `--gene-sets gene_sets.yaml` for pathway-level recovery
 
 ### Target Mapping CSV
 
@@ -183,6 +213,26 @@ metrics:
   - accuracy
   - macro_f1
 ```
+
+### Validation Benchmark Manifest
+
+Validation benchmarks compare curated expected findings against actual audit tables:
+
+```yaml
+cases:
+  - name: sciplex_known_batch_case
+    dataset: data/real/sciplex_case.h5ad
+    config: configs/sciplex_example.yaml
+expected_findings: validation_expected.csv
+```
+
+The expected-findings CSV uses:
+
+- `case`
+- `section`
+- `expected_status`
+- optional `match_column`
+- optional `match_value`
 
 ## Real Data Smoke Test
 
@@ -215,7 +265,10 @@ Its statistical checks are screening heuristics. Confounding checks, split gener
 
 ## Release
 
-Current release: `1.0.1` beta-quality first public release.
+Current source version: `1.0.2` beta-quality first public release.
+
+PyPI release metadata should use the Beta classifier from `pyproject.toml` so
+the public package metadata matches the maturity language in this repository.
 
 Built and verified with:
 
