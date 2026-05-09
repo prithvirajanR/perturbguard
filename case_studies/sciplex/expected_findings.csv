@@ -1,0 +1,4 @@
+case,section,match_column,match_value,expected_status
+sciplex,preflight_checks,check_id,control_balance,FAIL
+sciplex,preflight_checks,check_id,target_effect_detectability,INSUFFICIENT_METADATA
+sciplex,preflight_checks,check_id,metadata_only_prediction,PASS

@@ -369,8 +369,7 @@ def benchmark_check_cmd(
     typer.echo(f"Wrote benchmark validation to {out}")
 
 
-@app.command(name="validation-benchmark", help="Run curated expected-finding cases against audit outputs.")
-def validation_benchmark_cmd(
+def _run_expected_findings_command(
     manifest: Path = typer.Option(..., help="YAML manifest with cases and expected_findings CSV."),
     out: Path = typer.Option(..., help="Output report directory."),
     fail_on_mismatch: bool = typer.Option(False, help="Exit nonzero if any expected finding is missed."),
@@ -380,9 +379,27 @@ def validation_benchmark_cmd(
     result.to_csv(out / "validation_results.csv", index=False)
     write_html_report(out / "report.html", {"validation_results": result})
     typer.echo(result.to_string(index=False))
-    typer.echo(f"Wrote validation benchmark to {out}")
+    typer.echo(f"Wrote expected-findings check to {out}")
     if fail_on_mismatch and result["status"].eq("FAIL").any():
         raise typer.Exit(1)
+
+
+@app.command(name="expected-findings", help="Compare audit outputs with curated expected findings.")
+def expected_findings_cmd(
+    manifest: Path = typer.Option(..., help="YAML manifest with cases and expected_findings CSV."),
+    out: Path = typer.Option(..., help="Output report directory."),
+    fail_on_mismatch: bool = typer.Option(False, help="Exit nonzero if any expected finding is missed."),
+):
+    _run_expected_findings_command(manifest, out, fail_on_mismatch)
+
+
+@app.command(name="validation-benchmark", help="Deprecated alias for expected-findings.")
+def validation_benchmark_cmd(
+    manifest: Path = typer.Option(..., help="YAML manifest with cases and expected_findings CSV."),
+    out: Path = typer.Option(..., help="Output report directory."),
+    fail_on_mismatch: bool = typer.Option(False, help="Exit nonzero if any expected finding is missed."),
+):
+    _run_expected_findings_command(manifest, out, fail_on_mismatch)
 
 
 @app.command(name="profile-large", help="Open a large .h5ad in backed mode and report shape/storage metadata.")

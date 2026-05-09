@@ -236,7 +236,7 @@ def test_cli_validation_benchmark_writes_expected_finding_results(tmp_path):
         encoding="utf-8",
     )
 
-    result = runner.invoke(app, ["validation-benchmark", "--manifest", str(manifest), "--out", str(out)])
+    result = runner.invoke(app, ["expected-findings", "--manifest", str(manifest), "--out", str(out)])
 
     assert result.exit_code == 0, result.stdout
     assert (out / "validation_results.csv").exists()
@@ -313,6 +313,7 @@ def test_cli_exposes_new_commands(tmp_path):
         "target-map",
         "power-check",
         "benchmark-check",
+        "expected-findings",
         "validation-benchmark",
         "profile-large",
         "adversarial-check",

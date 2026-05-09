@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/prithvirajanR/perturbguard/actions/workflows/ci.yml/badge.svg)](https://github.com/prithvirajanR/perturbguard/actions/workflows/ci.yml)
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://www.python.org/)
-[![Release](https://img.shields.io/badge/release-1.0.2-blue)](https://github.com/prithvirajanR/perturbguard/releases/tag/v1.0.2)
+[![Release](https://img.shields.io/badge/release-1.0.3-blue)](https://github.com/prithvirajanR/perturbguard/releases/tag/v1.0.3)
 [![License](https://img.shields.io/badge/license-MIT-lightgrey)](LICENSE)
 
 **FastQC-style guardrails for single-cell perturbation datasets, splits, claims, and model benchmarks.**
@@ -98,10 +98,10 @@ perturbguard evaluate \
   --out results/effect_evaluation
 ```
 
-### Run a validation benchmark
+### Run an expected-findings check
 
 ```bash
-perturbguard validation-benchmark \
+perturbguard expected-findings \
   --manifest validation.yaml \
   --out results/validation \
   --fail-on-mismatch
@@ -123,7 +123,7 @@ perturbguard validation-benchmark \
 | Target mapping | Classifies targets as measured genes, drug target classes, pathway/class annotations, missing, or unmapped. |
 | Design planning | Checks planned cells, controls, replicate support, and batch support before running an experiment. |
 | Benchmark manifests | Validates dataset/split/claim/model/metrics manifests and runs claim-support checks. |
-| Validation benchmarks | Compares audit outputs against curated expected findings for real or synthetic benchmark cases. |
+| Expected-findings checks | Compares audit outputs against curated expected findings for real or synthetic benchmark cases. |
 | Large files | Profiles `.h5ad` files in backed mode before expensive audits. |
 | Dataset cards | Generates Markdown dataset cards with audit counts, uses, and limitations. |
 | Reports | Writes interactive HTML reports, plot links, CSV tables, `summary.json`, and recommendations. |
@@ -144,6 +144,7 @@ perturbguard compare-datasets
 perturbguard design-check
 perturbguard power-check
 perturbguard benchmark-check
+perturbguard expected-findings
 perturbguard validation-benchmark
 perturbguard profile-large
 perturbguard adversarial-check
@@ -214,9 +215,9 @@ metrics:
   - macro_f1
 ```
 
-### Validation Benchmark Manifest
+### Expected-Findings Manifest
 
-Validation benchmarks compare curated expected findings against actual audit tables:
+Expected-findings checks compare curated expected findings against actual audit tables:
 
 ```yaml
 cases:
@@ -263,9 +264,17 @@ PerturbGuard is not a perturbation prediction model and does not claim biologica
 
 Its statistical checks are screening heuristics. Confounding checks, split generation, and model-evaluation metrics are meant to catch common failure modes, not to replace careful study-specific modelling, optimized benchmark design, or perturbation-effect metrics tailored to your biological task.
 
+| PerturbGuard can support | PerturbGuard cannot prove |
+| --- | --- |
+| Required metadata, controls, split files, and prediction tables are present and parseable. | A perturbation dataset is biologically correct or complete. |
+| A supplied split has or does not have observable train/test overlap for configured claims. | A model truly generalizes to all unseen perturbations, targets, doses, or mechanisms. |
+| Controls, batches, donors, replicates, and cell counts show measurable warning patterns. | Confounding is absent in unmeasured metadata or hidden experimental structure. |
+| Target-effect and model-effect metrics agree with the measured expression fields provided. | A perturbation mechanism, pathway response, or drug polypharmacology is fully validated. |
+| Curated expected-findings cases reproduce known audit statuses for tracked datasets. | Warning thresholds are universally calibrated across all real perturbation datasets. |
+
 ## Release
 
-Current source version: `1.0.2` beta-quality first public release.
+Current source version: `1.0.3` beta-quality first public release.
 
 PyPI release metadata should use the Beta classifier from `pyproject.toml` so
 the public package metadata matches the maturity language in this repository.

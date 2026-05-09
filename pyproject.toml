@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "perturbguard"
-version = "1.0.2"
+version = "1.0.3"
 description = "QC, leakage detection, split design, and claim validation for single-cell perturbation studies."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -62,6 +62,13 @@ perturbguard = ["reports/templates/*.j2"]
 [tool.setuptools.data-files]
 "share/perturbguard/configs" = ["configs/*.yaml"]
 "share/perturbguard/docs" = ["docs/*.md"]
+"share/perturbguard/case_studies" = ["case_studies/README.md"]
+"share/perturbguard/case_studies/sciplex" = ["case_studies/sciplex/*.md", "case_studies/sciplex/*.yaml", "case_studies/sciplex/*.csv"]
+"share/perturbguard/case_studies/sciplex/expected_outputs" = ["case_studies/sciplex/expected_outputs/*.csv"]
+"share/perturbguard/case_studies/jorge" = ["case_studies/jorge/*.md", "case_studies/jorge/*.yaml", "case_studies/jorge/*.csv"]
+"share/perturbguard/case_studies/jorge/expected_outputs" = ["case_studies/jorge/expected_outputs/*.csv"]
+"share/perturbguard/case_studies/lincs" = ["case_studies/lincs/*.md", "case_studies/lincs/*.yaml", "case_studies/lincs/*.csv"]
+"share/perturbguard/case_studies/lincs/expected_outputs" = ["case_studies/lincs/expected_outputs/*.csv"]
 "share/perturbguard/workflows/snakemake" = ["workflows/snakemake/Snakefile", "workflows/snakemake/config.yaml"]
 "share/perturbguard/workflows/snakemake/profiles/slurm" = ["workflows/snakemake/profiles/slurm/config.yaml"]
 

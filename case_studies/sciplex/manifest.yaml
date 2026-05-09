@@ -1,0 +1,5 @@
+cases:
+  - name: sciplex
+    dataset: ../../data/real/sciplex_example.h5ad
+    config: ../../configs/sciplex_example.yaml
+expected_findings: expected_findings.csv

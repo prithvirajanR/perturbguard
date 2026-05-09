@@ -1,0 +1,4 @@
+case,section,match_column,match_value,expected_status
+lincs,preflight_checks,check_id,control_balance,FAIL
+lincs,preflight_checks,check_id,metadata_only_prediction,PASS
+lincs,preflight_checks,check_id,target_effect_detectability,INSUFFICIENT_METADATA

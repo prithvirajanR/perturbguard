@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.3
+
+- Renames the user-facing validation workflow to expected-findings checks, with `validation-benchmark` kept as a deprecated CLI alias.
+- Adds real-data case-study manifests and expected output snapshots for SciPlex, Jorge, and LINCS-style examples.
+- Adds README scope table clarifying what PerturbGuard can and cannot prove.
+- Aligns release metadata for the next GitHub/PyPI release.
+
 ## 1.0.2
 
 - Adds validation benchmark support with curated expected findings and a `validation-benchmark` CLI command.

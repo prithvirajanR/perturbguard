@@ -60,9 +60,9 @@ Optional perturbation-effect columns:
 When perturbation-effect columns are present, evaluation writes DE top-k recovery,
 effect-vector rank correlation, pathway recovery, and interval calibration tables.
 
-## Validation Benchmark Manifests
+## Expected-Findings Manifests
 
-Validation benchmark manifests run full audits and compare observed statuses to curated expected
+Expected-findings manifests run full audits and compare observed statuses to curated expected
 findings.
 
 ```yaml

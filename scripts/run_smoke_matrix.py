@@ -180,7 +180,7 @@ def main(argv: list[str] | None = None) -> None:
     run(
         [
             "perturbguard",
-            "validation-benchmark",
+            "expected-findings",
             "--manifest",
             str(validation_manifest),
             "--out",

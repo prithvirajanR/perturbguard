@@ -1,0 +1,4 @@
+case,section,match_column,match_value,expected_status,observed_status,status,message
+jorge,preflight_checks,check_id,metadata_confounding,FAIL,FAIL,PASS,"Expected FAIL, observed FAIL."
+jorge,preflight_checks,check_id,metadata_only_prediction,FAIL,FAIL,PASS,"Expected FAIL, observed FAIL."
+jorge,preflight_checks,check_id,target_effect_detectability,INSUFFICIENT_METADATA,INSUFFICIENT_METADATA,PASS,"Expected INSUFFICIENT_METADATA, observed INSUFFICIENT_METADATA."

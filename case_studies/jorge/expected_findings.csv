@@ -1,0 +1,4 @@
+case,section,match_column,match_value,expected_status
+jorge,preflight_checks,check_id,metadata_confounding,FAIL
+jorge,preflight_checks,check_id,metadata_only_prediction,FAIL
+jorge,preflight_checks,check_id,target_effect_detectability,INSUFFICIENT_METADATA

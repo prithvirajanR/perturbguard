@@ -1,0 +1,5 @@
+cases:
+  - name: jorge
+    dataset: ../../data/real/Jorge_example.h5ad
+    config: ../../configs/jorge_example.yaml
+expected_findings: expected_findings.csv
